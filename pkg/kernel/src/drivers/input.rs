@@ -1,6 +1,6 @@
 use crossbeam_queue::ArrayQueue;
 use heapless::String; // 使用heapless的String
-use crate::drivers::serial::get_serial;
+use super::serial::get_serial;
 type KEY = u8; //输入类型
 lazy_static! { //缓冲区数据结构
   static ref INPUT_BUF: ArrayQueue<KEY> = ArrayQueue::new(128);
