@@ -3,11 +3,11 @@ use x86_64::{registers::rflags::RFlags, structures::idt::InterruptStackFrameValu
 
 use crate::{memory::gdt::get_selector, RegistersValue};
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ProcessContextValue {
-    pub regs: RegistersValue,
-    pub stack_frame: InterruptStackFrameValue,
+#[repr(C)]//按照c语言规则内存布局
+#[derive(Clone, Copy)]//自动实现括号中的trait
+pub struct ProcessContextValue {//表示进程状态
+    pub regs: RegistersValue,//寄存器
+    pub stack_frame: InterruptStackFrameValue,//中断栈帧
 }
 
 #[repr(C)]
