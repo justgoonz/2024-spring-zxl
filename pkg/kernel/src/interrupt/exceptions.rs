@@ -13,7 +13,7 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
   // especially gerneral protection fault (GPF)
   // see: https://wiki.osdev.org/Exceptions
 }
-//中断处理函数，作为参数传递
+//异常处理函数，作为参数传递
 pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
   panic!("EXCEPTION: DIVIDE ERROR\n\n{:#?}", stack_frame);
 }

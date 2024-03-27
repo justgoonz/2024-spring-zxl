@@ -7,15 +7,15 @@ use x86_64::VirtAddr;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0; //interupt stack table
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
-// pub const TIMER_IST_INDEX :u16 =2;
+pub const TIMER_IST_INDEX :u16 =2;
 
-pub const IST_SIZES: [usize; 3] = [0x1000, 0x1000, 0x1000]; //常量数组，表示内存块的大小
+pub const IST_SIZES: [usize; 4] = [0x1000, 0x1000, 0x1000, 0x1000]; //常量数组，表示内存块的大小
 
 /* pub struct TaskStateSegment {
     reserved_1: u32,
-    pub privilege_stack_table: [VirtAddr; 3],
+    pub privilege_stack_table: [VirtAddr; 3],//特权栈
     reserved_2: u64,
-    pub interrupt_stack_table: [VirtAddr; 7],
+    pub interrupt_stack_table: [VirtAddr; 7],//中断栈
     reserved_3: u64,
     reserved_4: u16,
     pub iomap_base: u16,
@@ -58,9 +58,19 @@ lazy_static! {
       info!("Page Fault Stack : 0x{:016x}-0x{:016x}", stack_start.as_u64(), stack_end.as_u64());
       stack_end
     };
-    tss
-  };
-}
+    //FIXME:声明一个中断栈
+    tss.interrupt_stack_table[TIMER_IST_INDEX as usize]={
+      const STACK_SIZE: usize = IST_SIZES[3];
+      static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+      let stack_start = VirtAddr::from_ptr(unsafe { &STACK.as_ptr() });//from_ptr方法接受一个物理地址，根据该地址分配一个虚拟地址
+      let stack_end = stack_start + STACK_SIZE;
+      info!("Timer Stack : 0x{:016x}-0x{:016x}", stack_start.as_u64(), stack_end.as_u64());
+      stack_end
+    };
+      tss
+    };
+  }
+
 
 lazy_static! {
   static ref GDT: (GlobalDescriptorTable, KernelSelectors) = {

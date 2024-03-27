@@ -1,3 +1,4 @@
+//提供创建和管理进程所需的所有信息和方法
 use super::*;
 use crate::memory::*;
 use alloc::sync::Weak;
@@ -6,7 +7,7 @@ use spin::*;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
-
+use alloc::sync::Arc;
 #[derive(Clone)]
 pub struct Process {
     pid: ProcessId,
@@ -27,21 +28,21 @@ pub struct ProcessInner {
 
 impl Process {
     #[inline]
-    pub fn pid(&self) -> ProcessId {
+    pub fn pid(&self) -> ProcessId {//获取pid
         self.pid
     }
 
     #[inline]
-    pub fn write(&self) -> RwLockWriteGuard<ProcessInner> {
+    pub fn write(&self) -> RwLockWriteGuard<ProcessInner> {//返回类型RwLockWriteGuard<ProcessInner>
         self.inner.write()
     }
 
     #[inline]
-    pub fn read(&self) -> RwLockReadGuard<ProcessInner> {
+    pub fn read(&self) -> RwLockReadGuard<ProcessInner> {//返回类型RwLockReadGuard<ProcessInner>
         self.inner.read()
     }
 
-    pub fn new(
+    pub fn new(//创建一个新进程，返回Arc<process>
         name: String,
         parent: Option<Weak<Process>>,
         page_table: PageTableContext,
@@ -73,7 +74,7 @@ impl Process {
         })
     }
 
-    pub fn kill(&self, ret: isize) {
+    pub fn kill(&self, ret: isize) {//杀死一个进程
         let mut inner = self.inner.write();
 
         debug!(
@@ -82,11 +83,10 @@ impl Process {
             self.pid,
             ret
         );
-
         inner.kill(ret);
     }
 
-    pub fn alloc_init_stack(&self) -> VirtAddr {
+    pub fn alloc_init_stack(&self) -> VirtAddr {//分配初始栈
         // FIXME: alloc init stack base on self pid
 
         VirtAddr::new(0)
@@ -94,57 +94,63 @@ impl Process {
 }
 
 impl ProcessInner {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &str {//获取进程名称
         &self.name
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) {//增加进程调度次数
         self.ticks_passed += 1;
     }
 
-    pub fn status(&self) -> ProgramStatus {
+    pub fn status(&self) -> ProgramStatus {//返回进程当前状态
         self.status
     }
 
-    pub fn pause(&mut self) {
+    pub fn pause(&mut self) {//将进程设置为Ready
         self.status = ProgramStatus::Ready;
     }
 
-    pub fn resume(&mut self) {
+    pub fn resume(&mut self) {//将进程设置为Running
         self.status = ProgramStatus::Running;
     }
 
-    pub fn exit_code(&self) -> Option<isize> {
+    pub fn exit_code(&self) -> Option<isize> {//获取进程退出的代码
         self.exit_code
     }
 
-    pub fn clone_page_table(&self) -> PageTableContext {
+    pub fn clone_page_table(&self) -> PageTableContext {//克隆进程的页表
         self.page_table.as_ref().unwrap().clone_l4()
     }
 
-    pub fn is_ready(&self) -> bool {
+    pub fn is_ready(&self) -> bool {//检查进程是否为Ready
         self.status == ProgramStatus::Ready
     }
 
     /// Save the process's context
     /// mark the process as ready
-    pub(super) fn save(&mut self, context: &ProcessContext) {
+    pub(super) fn save(&mut self, context: &ProcessContext) {//保存进程的上下文
         // FIXME: save the process's context
+        self.pause();
+        self.context = *context;
     }
 
     /// Restore the process's context
     /// mark the process as running
-    pub(super) fn restore(&mut self, context: &mut ProcessContext) {
+    pub(super) fn restore(&mut self, context: &mut ProcessContext) {//恢复进程的上下文
         // FIXME: restore the process's context
-
+        self.resume();
+        *context = self.context;//修改传入的可变参数context
         // FIXME: restore the process's page table
+        if let Some(page_table) = &self.page_table{
+            page_table.load();
+        }
     }
 
-    pub fn parent(&self) -> Option<Arc<Process>> {
+    pub fn parent(&self) -> Option<Arc<Process>> {//获取进程的父进程
         self.parent.as_ref().and_then(|p| p.upgrade())
     }
 
-    pub fn kill(&mut self, ret: isize) {
+    pub fn kill(&mut self, ret: isize) {//杀死进程
         // FIXME: set exit code
 
         // FIXME: set status to dead
@@ -152,7 +158,7 @@ impl ProcessInner {
         // FIXME: take and drop unused resources
     }
 }
-
+//实现trait
 impl core::ops::Deref for Process {
     type Target = Arc<RwLock<ProcessInner>>;
 
@@ -179,7 +185,7 @@ impl core::ops::DerefMut for ProcessInner {
     }
 }
 
-impl core::fmt::Debug for Process {
+impl core::fmt::Debug for Process {//用于格式化进程信息
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let mut f = f.debug_struct("Process");
         f.field("pid", &self.pid);
@@ -201,7 +207,7 @@ impl core::fmt::Debug for Process {
     }
 }
 
-impl core::fmt::Display for Process {
+impl core::fmt::Display for Process {//打印进程信息
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let inner = self.inner.read();
         write!(

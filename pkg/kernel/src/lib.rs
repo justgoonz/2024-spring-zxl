@@ -25,10 +25,11 @@ pub use utils::*;
 #[macro_use]
 pub mod drivers;
 pub use drivers::*;
-//pub use drivers::input::*;
 
 pub mod memory;
 pub mod interrupt;
+
+pub mod proc;
 
 pub use alloc::format;
 use boot::BootInfo;
@@ -39,6 +40,7 @@ pub fn init(boot_info: &'static BootInfo) {
   memory::address::init(boot_info);
   memory::gdt::init(); // init gdt
   memory::allocator::init(); // init kernel heap allocator
+  proc::init(); // init process manager
   interrupt::init(); // init interrupts
   memory::init(boot_info); // init memory manager
   x86_64::instructions::interrupts::enable(); //enable interrupts

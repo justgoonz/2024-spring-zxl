@@ -1,3 +1,4 @@
+//页表
 use crate::memory::*;
 use core::ptr::copy_nonoverlapping;
 
@@ -8,7 +9,7 @@ use x86_64::{
     VirtAddr,
 };
 
-pub struct Cr3RegValue {
+pub struct Cr3RegValue {//CR3寄存器
     pub addr: PhysFrame,
     pub flags: Cr3Flags,
 }
@@ -19,12 +20,12 @@ impl Cr3RegValue {
     }
 }
 
-pub struct PageTableContext {
-    pub reg: Arc<Cr3RegValue>,
+pub struct PageTableContext {//页表上下文(区别于进程的上下文，将新的页表加载到CR3寄存器时，要处理页表的上下文)
+    pub reg: Arc<Cr3RegValue>,//CR3寄存器的值
 }
 
-impl PageTableContext {
-    pub fn new() -> Self {
+impl PageTableContext {//页表上下文的方法
+    pub fn new() -> Self {//创建一个页表对象
         let (frame, flags) = Cr3::read();
         Self {
             reg: Arc::new(Cr3RegValue::new(frame, flags)),
@@ -32,7 +33,7 @@ impl PageTableContext {
     }
 
     /// Create a new page table object based on current page table.
-    pub fn clone_l4(&self) -> Self {
+    pub fn clone_l4(&self) -> Self {//根据当前页表创建一个新的页表对象
         // 1. alloc new page table
         let mut frame_alloc = crate::memory::get_frame_alloc_for_sure();
         let page_table_addr = frame_alloc
@@ -55,12 +56,12 @@ impl PageTableContext {
     }
 
     /// Load the page table to Cr3 register.
-    pub fn load(&self) {
+    pub fn load(&self) {//加载页表到CR3寄存器
         unsafe { Cr3::write(self.reg.addr, self.reg.flags) }
     }
 
     /// Get the page table object by Cr3 register value.
-    pub fn mapper(&self) -> OffsetPageTable<'static> {
+    pub fn mapper(&self) -> OffsetPageTable<'static> {//获取页表
         unsafe {
             OffsetPageTable::new(
                 (physical_to_virtual(self.reg.addr.start_address().as_u64()) as *mut PageTable)

@@ -1,20 +1,19 @@
 use super::consts::*;
 use core::sync::atomic::{AtomicU64, Ordering};
 use x86_64::structures::idt::{InterruptDescriptorTable,InterruptStackFrame};
+use crate::{memory::gdt, proc::switch};
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt[Interrupts::IrqBase as usize + Irq::Timer as usize]
-        .set_handler_fn(clock_handler);
+        .set_handler_fn(process_scheduler_handler)
+        .set_stack_index(gdt::TIMER_IST_INDEX);
 }
+as_handler!(process_scheduler);
 
-pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
-    //println!("interrupt of clock_handler");
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        if inc_counter() % 0x10 == 0 {//调整中断频率
-            //防止中断打断输出，注释掉
-            //info!("Tick! @{}", read_counter());
-        }
-        super::ack();
-    });
+pub extern "x86-interrupt" fn process_scheduler(_sf: InterruptStackFrame) {//idt负责传递这个参数
+    //FIXME
+    x86_64::instructions::interrupts::without_interrupts(|| {//在中断关闭的状态下继续执行，保证操作的原子性，防止被其他中断打断
+    // do something
+})
 }
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
