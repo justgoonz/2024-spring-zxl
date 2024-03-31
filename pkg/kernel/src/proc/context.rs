@@ -42,7 +42,7 @@ impl ProcessContext {
         context.as_mut().as_mut_ptr().write(self.value);
     }
     // 初始化进程的栈帧，设置入口点地址和栈顶地址
-    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {//
+    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.value.stack_frame.stack_pointer = stack_top;
         self.value.stack_frame.instruction_pointer = entry;
         self.value.stack_frame.cpu_flags =//设置cpu标志

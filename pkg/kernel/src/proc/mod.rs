@@ -1,6 +1,6 @@
 mod context;
 mod data;
-mod manager;
+pub mod manager;
 mod paging;
 mod pid;
 mod process;
@@ -87,9 +87,9 @@ pub fn switch(context: &mut ProcessContext) {//参数是当前处理器的上下
 }
 //创建一个新的内核线程
 pub fn spawn_kernel_thread(entry: fn() -> !, name: String, data: Option<ProcessData>) -> ProcessId {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let entry = VirtAddr::new(entry as usize as u64);
-        get_process_manager().spawn_kernel_thread(entry, name, data)
+    x86_64::instructions::interrupts::without_interrupts(|| {//关中断
+        let entry = VirtAddr::new(entry as usize as u64);//将参数中的函数转化成虚拟地址
+        get_process_manager().spawn_kernel_thread(entry, name, data)//创建一个内核线程
     })
 }
 //打印进程列表

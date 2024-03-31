@@ -1,4 +1,5 @@
 //提供创建和管理进程所需的所有信息和方法
+extern crate elf;
 use super::*;
 use crate::memory::*;
 use alloc::sync::Weak;
@@ -7,6 +8,8 @@ use spin::*;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
+use x86_64::VirtAddr;
+
 use alloc::sync::Arc;
 #[derive(Clone)]
 pub struct Process {
@@ -85,11 +88,46 @@ impl Process {
         );
         inner.kill(ret);
     }
-
-    pub fn alloc_init_stack(&self) -> VirtAddr {//分配初始栈
+    // 跟你爆了^^'（流汗黄豆
+    pub fn alloc_init_stack(&self) -> VirtAddr {//分配初始栈空间,返回虚拟地址的栈顶地址
         // FIXME: alloc init stack base on self pid
-
-        VirtAddr::new(0)
+        // 参考bootloader中为内核分配栈空间的代码
+        // 根据内存布局预设和当前进程的 PID，为其分配初始栈空间。
+        let process_inner = self.write();
+        let process_pid = self.pid.0;//进程id
+        // 克隆内核页表
+        let kernel_page_table = process_inner.clone_page_table();
+        self.write().page_table = Some(kernel_page_table);
+        // 使用elf::map_range()函数来进行页面映射
+        let frame_alloctor = &mut *get_frame_alloc_for_sure();
+        let mut page_table = self.read().page_table.as_ref().unwrap().mapper();//as_ref()是否会导致某些错误？
+        // 根据内存预设布局分配栈空间
+        // 从STACK_MAX向下分配进程栈
+        // STACK_MAX_SIZE是每个进程栈的最大空间
+        let stack_top_for_pid = STACK_INIT_TOP - (process_pid as u64 * STACK_DEF_SIZE);//栈顶地址
+        let stack_bot_for_pid = STACK_INIT_BOT - (process_pid as u64 * STACK_DEF_SIZE);//栈底地址
+        let stack_start = VirtAddr::new(stack_bot_for_pid);
+        let stack_end = VirtAddr::new(stack_top_for_pid);
+        
+        //调用pkg/elf/src/lib.rs中的map_range
+        elf::map_range(
+        stack_start.as_u64(),
+        (stack_end - stack_start) / PAGE_SIZE, // 计算栈的大小，单位是页
+            &mut page_table, // 页表映射器
+            frame_alloctor, // 物理帧分配器
+        ).expect("Failed to map kernel stack by map_range");
+        // 返回栈顶地址
+        stack_end//?
+    }
+    //map_range函数声明
+    /*pub fn map_range(
+    addr: u64,
+    count: u64,
+    page_table: &mut impl page<Size4KiB>, <- 如何传递这个参数？
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<PageRange, MapToError<Size4KiB>> { */
+    pub fn init_stack_frame(&self,entry: VirtAddr, stack_top: VirtAddr){//提供调用init_stack_frame的接口
+        self.write().context.init_stack_frame(entry, stack_top);
     }
 }
 

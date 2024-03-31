@@ -46,5 +46,8 @@ impl ProcessData {
 
     pub fn is_on_stack(&self, addr: VirtAddr) -> bool {//检查地址是否在栈上
         // FIXME: check if the address is on the stack
+        // 未实现
+        let masked_addr =addr.as_u64() & STACK_START_MASK;
+        false
     }
 }

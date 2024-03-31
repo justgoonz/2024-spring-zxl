@@ -35,12 +35,14 @@ impl PageTableContext {//页表上下文的方法
     /// Create a new page table object based on current page table.
     pub fn clone_l4(&self) -> Self {//根据当前页表创建一个新的页表对象
         // 1. alloc new page table
+        // 分配一个页表
         let mut frame_alloc = crate::memory::get_frame_alloc_for_sure();
         let page_table_addr = frame_alloc
             .allocate_frame()
             .expect("Cannot alloc page table for new process.");
 
         // 2. copy current page table to new page table
+        // 将当前页表复制到新页表
         unsafe {
             copy_nonoverlapping::<PageTable>(
                 physical_to_virtual(self.reg.addr.start_address().as_u64()) as *mut PageTable,
@@ -50,6 +52,7 @@ impl PageTableContext {//页表上下文的方法
         }
 
         // 3. create page table object
+        // 创建并返回页表对象
         Self {
             reg: Arc::new(Cr3RegValue::new(page_table_addr, Cr3Flags::empty())),
         }

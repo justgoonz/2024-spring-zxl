@@ -68,7 +68,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
         .max(0x1_0000_0000); // include IOAPIC MMIO area
 
     // 4. Map ELF segments, kernel stack and physical memory to virtual memory
-    let mut page_table = current_page_table();
+    let mut page_table = current_page_table();//获取页表
 
     // FIXME: root page table is readonly, disable write protect (Cr0)
     unsafe{
@@ -80,7 +80,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     //调用map_physical_memory
     // 物理内存映射到虚拟地址
     let mut frame_allocator = UEFIFrameAllocator(bs);
-    map_physical_memory(
+    map_physical_memory(//写入page_table中，建立**整个地址空间**的映射.用于建立物理地址和虚拟地址的全局映射
         config.physical_memory_offset,
         max_phys_addr,
         &mut page_table,
@@ -88,7 +88,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     );
 
     // FIXME: load and map the kernel elf file
-    //调用load_elf
+    // 调用load_elf
     // 加载并映射内核 ELF 文件
     load_elf(
         &elf, // 已加载的 ELF 文件
@@ -101,7 +101,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     // 映射内核栈
     let stack_end = VirtAddr::new(config.kernel_stack_address + config.kernel_stack_size * 0x1000);
     let stack_start = VirtAddr::new(config.kernel_stack_address);
-    map_range(
+    map_range(//将虚拟内存映射到物理内存中，page_table是页表，如映射一个栈。
         stack_start.as_u64(),
         (stack_end - stack_start) / 0x1000, // 计算栈的大小，单位是页
         &mut page_table, // 页表映射器

@@ -113,26 +113,40 @@ impl ProcessManager {
     //创建一个新的内核线程
     pub fn spawn_kernel_thread(
         &self,
-        entry: VirtAddr,
+        entry: VirtAddr,//待执行的函数入口地址
         name: String,
         proc_data: Option<ProcessData>,
     ) -> ProcessId {
         let kproc = self.get_proc(&KERNEL_PID).unwrap();
         let page_table = kproc.read().clone_page_table();
         let proc = Process::new(name, Some(Arc::downgrade(&kproc)), page_table, proc_data);
-
+        let pid = proc.pid();
         // alloc stack for the new process base on pid
-        let stack_top = proc.alloc_init_stack();
-
+        let stack_top = proc.alloc_init_stack();//分配初始栈，返回栈顶地址
         // FIXME: set the stack frame
-
+        // processContext的init_stack_frame
+        proc.init_stack_frame(entry, stack_top);//初始化进程栈帧
         // FIXME: add to process map
-
+        self.add_proc(pid, proc);
         // FIXME: push to ready queue
-
-        KERNEL_PID
+        // 将创建好的进程放入队列中
+        self.push_ready(pid);
+        pid
+        //KERNEL_PID
+    }
+    pub fn get_exit_code(&self,pid:ProcessId) -> Option<isize>{//获取进程的返回值
+        if let Some(proc) = self.get_proc(&pid){
+            //疑惑：进程退出的判断条件是？
+            let proc_inner = proc.read();
+            if proc_inner.status() != ProgramStatus::Running{ //如果进程已退出
+                let exit_code = proc_inner.exit_code();//获取进程返回值
+                return exit_code;
+            }
+        }
+        None//进程还没有退出/get_proc方法返回None
     }
 
+    
     pub fn kill_current(&self, ret: isize) {//杀死当前进程
         self.kill(processor::get_pid(), ret);
     }
