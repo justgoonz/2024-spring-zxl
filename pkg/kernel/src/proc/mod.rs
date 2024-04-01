@@ -4,9 +4,8 @@ pub mod manager;
 mod paging;
 mod pid;
 mod process;
-mod processor;
+pub mod processor;
 
-use core::ops::DerefMut;
 
 use manager::*;
 use process::*;

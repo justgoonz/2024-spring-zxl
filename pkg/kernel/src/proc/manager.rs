@@ -153,7 +153,10 @@ impl ProcessManager {
     //处理页面错误
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
         // FIXME: handle page fault
-
+        //在 ProcessManager 中，检查缺页异常是否包含越权访问或其他非预期的错误码。
+        //如果缺页异常是由于非预期异常导致的，或者缺页异常的地址不在当前进程的栈空间中，直接返回 false。
+        //如果缺页异常的地址在当前进程的栈空间中，把缺页异常的处理委托给当前的进程。你可能需要为 ProcessInner 添加用于分配新的栈、更新进程存储信息的函数。
+        //在进程的缺页异常处理函数中：分配新的页面、更新页表、更新进程数据中的栈信息。
         false
     }
     //杀死指定pid的进程

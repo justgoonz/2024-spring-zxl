@@ -8,6 +8,7 @@ use apic::*;
 use x86_64::structures::idt::InterruptDescriptorTable;
 use crate::memory::physical_to_virtual;
 
+
 lazy_static! {
   //ref表示引用对象，和&类似，前者用于申请返回引用，后者用于主动返回引用
   static ref IDT: InterruptDescriptorTable = {
